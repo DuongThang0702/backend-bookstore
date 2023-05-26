@@ -1,7 +1,7 @@
-import { Coupon } from "../models";
-import handleErrors from "../middleware/handle-errors";
-import { titleCoupon, discount, expiry } from "../helpers/joi_schema";
-import Joi from "joi";
+const { Coupon } = require("../models");
+const handleErrors = require("../middleware/handle-errors");
+const { titleCoupon, discount, expiry } = require("../helpers/joi-schema");
+const Joi = require("joi");
 
 const couponController = {
   getAllCoupons: async (req, res) => {
@@ -73,4 +73,4 @@ const couponController = {
   },
 };
 
-export default couponController;
+module.exports = couponController;

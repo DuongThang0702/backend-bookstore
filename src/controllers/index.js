@@ -1,5 +1,5 @@
-import BookController from "./book";
-import UserController from "./user";
-import CouponController from "./coupon";
+const BookController = require("./book");
+const UserController = require("./user");
+const CouponController = require("./coupon");
 
-export { BookController, UserController, CouponController };
+module.exports = { BookController, UserController, CouponController };

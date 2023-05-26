@@ -1,6 +1,6 @@
-import Book from "./book";
-import User from "./user";
-import Coupon from "./coupon";
-import Order from "./order";
+const Book = require("./book");
+const User = require("./user");
+const Coupon = require("./coupon");
+const Order = require("./order");
 
-export { Book, User, Coupon, Order };
+module.exports = { Book, User, Coupon, Order };

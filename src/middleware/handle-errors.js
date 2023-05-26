@@ -1,4 +1,4 @@
-import createHttpError from "http-errors";
+const createHttpError = require("http-errors");
 
 const handleErrors = {
   BadRequest: (err, res) => {
@@ -24,4 +24,4 @@ const handleErrors = {
   },
 };
 
-export default handleErrors;
+module.exports = handleErrors;

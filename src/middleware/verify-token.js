@@ -1,17 +1,15 @@
-import dotenv from "dotenv";
-dotenv.config();
-import jwt, { TokenExpiredError } from "jsonwebtoken";
-import handleErrors from "./handle_error";
+require("dotenv").config();
+const jwt = require("jsonwebtoken");
+const handleErrors = require("./handle-errors");
 
 const verifyToken = async (req, res, next) => {
   try {
-    const token = req.headers.authorization;
+    const token = req.headers?.authorization;
+    if (!token) return handleErrors.BadRequest("Require authorization", res);
     const accessToken = token?.split(" ")[1];
-    if (!accessToken)
-      return handleErrors.BadRequest("Require authorization", res);
     jwt.verify(accessToken, process.env.ACCESS_TOKEN, (error, user) => {
       if (error) {
-        const isChecked = error instanceof TokenExpiredError;
+        const isChecked = error instanceof jwt.TokenExpiredError;
         if (isChecked)
           return handleErrors.UnAuth("Token expired", res, isChecked);
         if (!isChecked)
@@ -25,4 +23,4 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-export default verifyToken;
+module.exports = verifyToken;

@@ -1,12 +1,12 @@
-import express from "express";
-import "dotenv/config";
-import bodyParser from "body-parser";
-import morgan from "morgan";
-import cookieParser from "cookie-parser";
-import cors from "cors";
+const express = require("express");
+require("dotenv").config();
+const bodyParser = require("body-parser");
+const morgan = require("morgan");
+const cookieParser = require("cookie-parser");
+const cors = require("cors");
 
-import connectDB from "./config/connect-db.js";
-// import initRoutes from "./routes";
+const connectDB = require("./config/database");
+const initRoutes = require("./router/");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -26,4 +26,4 @@ app.listen(port, () => {
 });
 
 connectDB();
-// initRoutes(app);
+initRoutes(app);

@@ -1,5 +1,5 @@
-import { Schema, model } from "mongoose";
-import crypto from "crypto";
+const { Schema, model } = require("mongoose");
+const crypto = require("crypto");
 
 const UserSchema = new Schema(
   {
@@ -13,12 +13,12 @@ const UserSchema = new Schema(
       require: true,
       min: 6,
     },
-    lastName: { type: String },
-    firstname: { type: String },
+    lastName: { type: String, default: "" },
+    firstname: { type: String, default: "" },
     cart: { type: [], default: [] },
     role: { type: String, default: "user" },
-    avatar: { type: String },
-    mobile: { type: Number },
+    avatar: { type: String, default: null },
+    mobile: { type: Number, default: null },
     refreshToken: { type: String, default: "" },
     passwordChangedAt: String,
     passwordResetToken: String,
@@ -38,4 +38,4 @@ UserSchema.methods.createPasswordChangedToken = function () {
 };
 
 const User = model("User", UserSchema);
-export default User;
+module.exports = User;

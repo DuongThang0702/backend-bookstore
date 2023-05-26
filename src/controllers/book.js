@@ -1,18 +1,19 @@
-import joi from "joi";
-import slugify from "slugify";
+const joi = require("joi");
+const slugify = require("slugify");
 
-import { Book } from "../models";
-import handleErrors from "../middleware/handle-errors";
-import { star, comment, bookId } from "../helpers/joi_schema";
-
-import {
+const { Book } = require("../models");
+const handleErrors = require("../middleware/handle-errors");
+const {
   title,
   price,
   image,
   description,
   category,
   available,
-} from "../helpers/joi_schema";
+  star,
+  comment,
+  bookId,
+} = require("../helpers/joi-schema");
 
 const BookController = {
   getBooks: async (req, res) => {
@@ -70,19 +71,18 @@ const BookController = {
   },
 
   createBook: async (req, res) => {
+    const { error } = joi
+      .object({
+        title,
+        price,
+        image,
+        description,
+        category,
+        available,
+      })
+      .validate(req.body);
+    if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
     try {
-      const { error } = joi
-        .object({
-          title,
-          price,
-          image,
-          description,
-          category,
-          available,
-        })
-        .validate(req.body);
-      if (error)
-        return handleErrors.BadRequest(error?.details[0]?.message, res);
       const isChecked = await Book.findOne({ title: req.body.title });
       if (isChecked) return handleErrors.BadRequest("Title has exist", res);
       req.body.slug = slugify(req.body.title);
@@ -100,7 +100,7 @@ const BookController = {
   getBookById: async (req, res) => {
     try {
       const { bid } = req.params;
-      const response = await Book.findOne({ _id: bid });
+      const response = await Book.findById(bid);
       res.status(200).json({
         err: response ? 0 : 1,
         bookData: response ? response : "BookId invalid",
@@ -140,13 +140,13 @@ const BookController = {
   },
 
   ratings: async (req, res) => {
-    const userId = req.user?._id;
+    const { _id } = req.user;
     const { error } = joi.object({ star, comment, bookId }).validate(req.body);
     if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
     try {
       const ratingBook = await Book.findById(req.body.bookId);
       const alreadyRating = ratingBook?.ratings?.find(
-        (el) => el.postedBy.toString() === userId
+        (el) => el.postedBy.toString() === _id
       );
 
       if (alreadyRating) {
@@ -201,4 +201,4 @@ const BookController = {
   },
 };
 
-export default BookController;
+module.exports = BookController;

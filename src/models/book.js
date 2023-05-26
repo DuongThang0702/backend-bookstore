@@ -1,14 +1,14 @@
-import { Schema, Types, model } from "mongoose";
+const { Schema, Types, model } = require("mongoose");
 
 const BookSchema = new Schema(
   {
     title: { type: String, require: true, unique: true },
     slug: { type: String, unique: true, lowercase: true, require: true },
     price: { type: Number, require: true },
-    category: { type: [String] },
-    image: [{ type: String }],
-    description: { type: String },
-    available: { type: Number },
+    category: { type: [String], require: true },
+    image: [{ type: String, require: true }],
+    description: { type: String, default: "" },
+    available: { type: Number, default: 0 },
     sold: { type: Number, default: 0 },
     ratings: [
       {
@@ -24,4 +24,4 @@ const BookSchema = new Schema(
 
 const Book = model("Book", BookSchema);
 
-export default Book;
+module.exports = Book;

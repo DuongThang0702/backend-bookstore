@@ -1,14 +1,13 @@
-import dotenv from "dotenv";
-dotenv.config();
-import joi from "joi";
-import bcrypt from "bcrypt";
-import jwt, { TokenExpiredError } from "jsonwebtoken";
-import crypto from "crypto";
+require("dotenv").config();
+const joi = require("joi");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
-import { User } from "../models/";
-import { password, email, token } from "../helpers/joi_schema";
-import handleErrors from "../middleware/handle-errors";
-import sendMail from "../helpers/send_email";
+const { User } = require("../models/");
+const { password, email, token } = require("../helpers/joi-schema");
+const handleErrors = require("../middleware/handle-errors");
+const sendMail = require("../helpers/send-email");
 
 const UserController = {
   getUserCurrent: async (req, res) => {
@@ -32,6 +31,7 @@ const UserController = {
     if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
     try {
       const response = await User.findOne({ email: req.body.email });
+      if (!response) return handleErrors.BadRequest("Email invalid", res);
       const isChecked =
         response &&
         (await bcrypt.compare(req.body.password, response.password));
@@ -45,7 +45,7 @@ const UserController = {
       });
       const { password, ...userdata } = response?.toObject();
 
-      res.cookie("refresh_token", refreshToken, {
+      res.cookie("refresh_token", refresh_token, {
         httpOnly: true,
         maxAge: 5 * 24 * 60 * 60 * 1000,
       });
@@ -56,7 +56,7 @@ const UserController = {
           ? "login successfully"
           : response
           ? "Wrong password"
-          : "Email invalid",
+          : "Something went wrong !",
         user_data: accessToken ? userdata : null,
         access_token: accessToken ? `Bearer ${accessToken}` : null,
       });
@@ -111,13 +111,13 @@ const UserController = {
   generateAccessToken: (response) => {
     return jwt.sign(
       { _id: response._id, email: response.email, role: response.role },
-      `${process.env.ACCESS_TOKEN}`,
+      process.env.ACCESS_TOKEN,
       { expiresIn: "30s" }
     );
   },
 
   generateRefreshToken: (response) => {
-    return jwt.sign({ _id: response._id }, `${process.env.REFRESH_TOKEN}`, {
+    return jwt.sign({ _id: response._id }, process.env.REFRESH_TOKEN, {
       expiresIn: "5d",
     });
   },
@@ -132,7 +132,7 @@ const UserController = {
         process.env.REFRESH_TOKEN,
         async (err, user) => {
           if (err) {
-            const isChecked = err instanceof TokenExpiredError;
+            const isChecked = err instanceof jwt.TokenExpiredError;
             if (isChecked)
               return handleErrors.UnAuth("Token expired", res, isChecked);
             if (!isChecked)
@@ -224,8 +224,8 @@ const UserController = {
 
   deleteUser: async (req, res) => {
     try {
-      const { id } = req.query;
-      const response = await User.findByIdAndDelete({ _id: id });
+      const { uid } = req.params;
+      const response = await User.findByIdAndDelete(uid);
       res.status(200).json({
         err: response ? 0 : 1,
         mess: response
@@ -238,14 +238,13 @@ const UserController = {
   },
 
   updateUser: async (req, res) => {
+    const { _id } = req.user;
+    if (!_id || Object.keys(req.body).length === 0)
+      return handleErrors.BadRequest("Missing input", res);
     try {
-      const userId = req.user?._id;
-      if (!userId || Object.keys(req.body).length === 0)
-        return handleErrors.BadRequest("Missing input", res);
-      const response = await User.findByIdAndUpdate(userId, req.body, {
+      const response = await User.findByIdAndUpdate(_id, req.body, {
         new: true,
       }).select("-password -role");
-
       res.status(200).json({
         err: response ? 0 : 1,
         mess: response ? response : "No user update",
@@ -257,10 +256,10 @@ const UserController = {
 
   updateUserByAdmin: async (req, res) => {
     try {
-      const { userId } = req.params;
-      if (!userId || Object.keys(req.body).length === 0)
+      const { uid } = req.params;
+      if (!uid || Object.keys(req.body).length === 0)
         return handleErrors.BadRequest("Missing input", res);
-      const response = await User.findByIdAndUpdate(userId, req.body, {
+      const response = await User.findByIdAndUpdate(uid, req.body, {
         new: true,
       }).select("-password -role");
 
@@ -274,4 +273,4 @@ const UserController = {
   },
 };
 
-export default UserController;
+module.exports = UserController;

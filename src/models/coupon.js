@@ -1,8 +1,8 @@
-import { Schema, model } from "mongoose";
+const { Schema, model } = require("mongoose");
 
 const CouponSchema = new Schema(
   {
-    titleCoupon: { type: String, require: true, unique: true },
+    titleCoupon: { type: String, require: true, unique: true, uppercase: true },
     discount: { type: Number, require: true },
     expiry: { type: Date, require: true },
   },
@@ -10,4 +10,4 @@ const CouponSchema = new Schema(
 );
 
 const Coupon = model("Coupon", CouponSchema);
-export default Coupon;
+module.exports = Coupon;
