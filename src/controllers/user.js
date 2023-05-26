@@ -2,26 +2,30 @@ import dotenv from "dotenv";
 dotenv.config();
 import joi from "joi";
 import bcrypt from "bcrypt";
-import jwt, { TokenExpiredError, VerifyErrors } from "jsonwebtoken";
+import jwt, { TokenExpiredError } from "jsonwebtoken";
 import crypto from "crypto";
 
 import { User } from "../models/";
 import { password, email, token } from "../helpers/joi_schema";
-import handleErrors from "../middleware/handle_error";
+import handleErrors from "../middleware/handle-errors";
 import sendMail from "../helpers/send_email";
 
 const UserController = {
   getUserCurrent: async (req, res) => {
-    const userId = req.user?._id;
-    const response = await User.findById(userId).select(
-      "-refreshToken -password -role"
-    );
-    if (!response) return handleErrors.BadRequest("not found", res);
-    res.status(200).json({
-      err: 0,
-      mess: "Got",
-      userData: response,
-    });
+    try {
+      const userId = req.user?._id;
+      const response = await User.findById(userId).select(
+        "-refreshToken -password -role"
+      );
+      if (!response) return handleErrors.BadRequest("not found", res);
+      res.status(200).json({
+        err: 0,
+        mess: "Got",
+        userData: response,
+      });
+    } catch (err) {
+      return handleErrors.InternalServerError(res);
+    }
   },
   login: async (req, res) => {
     const { error } = joi.object({ email, password }).validate(req.body);
