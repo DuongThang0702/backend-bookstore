@@ -1,5 +1,6 @@
 const joi = require("joi");
 const slugify = require("slugify");
+const { Types } = require("mongoose");
 
 const { Book } = require("../models");
 const handleErrors = require("../middleware/handle-errors");
@@ -14,6 +15,7 @@ const {
   comment,
   bookId,
 } = require("../helpers/joi-schema");
+const { multipleDelete } = require("../helpers/multiple-delete-image");
 
 const BookController = {
   getBooks: async (req, res) => {
@@ -90,7 +92,7 @@ const BookController = {
       const response = await newBook.save();
       res.status(200).json({
         err: response ? 0 : 1,
-        mess: response ? response : "cann't create new book",
+        mess: response ? response : "cann't create books",
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);
@@ -98,12 +100,14 @@ const BookController = {
   },
 
   getBookById: async (req, res) => {
+    const { bid } = req.params;
+    if (!Types.ObjectId.isValid(bid))
+      return handleErrors.BadRequest("Invalid bookId", res);
     try {
-      const { bid } = req.params;
       const response = await Book.findById(bid);
       res.status(200).json({
         err: response ? 0 : 1,
-        bookData: response ? response : "BookId invalid",
+        bookData: response ? response : "Something went worng !",
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);
@@ -111,8 +115,10 @@ const BookController = {
   },
 
   updateBook: async (req, res) => {
+    const { bid } = req.params;
+    if (!Types.ObjectId.isValid(bid))
+      return handleErrors.BadRequest("Invalid bookId", res);
     try {
-      const { bid } = req.params;
       if (req.body && req.body.title) req.body.slug = slugify(req.body.title);
       const response = await Book.findByIdAndUpdate(bid, req.body, {
         new: true,
@@ -127,8 +133,10 @@ const BookController = {
   },
 
   deleteBook: async (req, res) => {
+    const { bid } = req.params;
+    if (!Types.ObjectId.isValid(bid))
+      return handleErrors.BadRequest("Invalid bookId", res);
     try {
-      const { bid } = req.params;
       const response = await Book.findByIdAndDelete(bid);
       res.status(200).json({
         err: response ? 0 : 1,
@@ -195,6 +203,42 @@ const BookController = {
           response,
         });
       }
+    } catch (err) {
+      return handleErrors.InternalServerError(res);
+    }
+  },
+
+  updateImageBook: async (req, res) => {
+    const fileData = req.files;
+    if (!fileData) return handleErrors.BadRequest("Missing input", res);
+    const listImageName = fileData.map((el) => el.filename);
+
+    const { bid } = req.params;
+    if (!Types.ObjectId.isValid(bid)) {
+      for (const imageName of listImageName) {
+        multipleDelete(imageName);
+      }
+      return handleErrors.BadRequest("Invalid Id", res);
+    }
+    try {
+      const response = await Book.findByIdAndUpdate(
+        bid,
+        {
+          $push: { images: { $each: fileData.map((el) => el.path) } },
+        },
+        { new: true }
+      );
+
+      if (fileData && !response) {
+        for (const imageName of listImageName) {
+          multipleDelete(imageName);
+        }
+      }
+      res.status(200).json({
+        err: response ? 0 : 1,
+        mess: response ? "Updated" : "Something went worng !",
+        data: response ? response : null,
+      });
     } catch (err) {
       return handleErrors.InternalServerError(res);
     }

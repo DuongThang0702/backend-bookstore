@@ -6,7 +6,7 @@ const BookSchema = new Schema(
     slug: { type: String, unique: true, lowercase: true, require: true },
     price: { type: Number, require: true },
     category: { type: [String], require: true },
-    image: [{ type: String, require: true }],
+    images: [{ type: String, require: true }],
     description: { type: String, default: "" },
     available: { type: Number, default: 0 },
     sold: { type: Number, default: 0 },
