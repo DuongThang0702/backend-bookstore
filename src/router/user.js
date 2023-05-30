@@ -13,6 +13,8 @@ router.delete("/logout", UserController.logout);
 
 //private
 router.get("/current", verifyToken, UserController.getUserCurrent);
+router.patch("/update-cart", verifyToken, UserController.updateCart);
+router.patch("/update-address", verifyToken, UserController.updateAddress);
 router.patch("/current", verifyToken, UserController.updateUser);
 router.patch("/:uid", [verifyToken, isAdmin], UserController.updateUserByAdmin);
 router.get("/all-user", [verifyToken, isAdmin], UserController.getUsers);

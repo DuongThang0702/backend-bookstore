@@ -1,4 +1,4 @@
-const { Schema, model } = require("mongoose");
+const { Schema, model, Types } = require("mongoose");
 const crypto = require("crypto");
 
 const UserSchema = new Schema(
@@ -13,9 +13,22 @@ const UserSchema = new Schema(
       require: true,
       min: 6,
     },
+    address: [
+      {
+        district: String,
+        ward: String,
+        city: String,
+        homeNumber: String,
+      },
+    ],
     lastName: { type: String, default: "" },
     firstname: { type: String, default: "" },
-    cart: { type: [], default: [] },
+    cart: [
+      {
+        bid: { type: Types.ObjectId, ref: "Book" },
+        quantity: { type: Number },
+      },
+    ],
     role: { type: String, default: "user" },
     avatar: { type: String, default: null },
     mobile: { type: Number, default: null },

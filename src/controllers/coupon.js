@@ -23,7 +23,7 @@ const couponController = {
     if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
     try {
       const ischecked = await Coupon.findOne({
-        titleCoupon: coupon?.titleCoupon,
+        titleCoupon: req.body.titleCoupon,
       });
       if (ischecked)
         return handleErrors.BadRequest("title coupon exsited", res);

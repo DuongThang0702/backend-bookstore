@@ -9,13 +9,14 @@ const router = express.Router();
 router.get("/all-book", BookController.getBooks);
 router.get("/book-id/:bid", BookController.getBookById);
 
+//private
+router.post("/ratings", verifyToken, BookController.ratings);
 router.post(
   "/upload-image/:bid",
+  [verifyToken, isAdminOrCreator],
   uploader.array("image-book", 10),
   BookController.updateImageBook
 );
-//private
-router.post("/ratings", verifyToken, BookController.ratings);
 router.post("/", [verifyToken, isAdminOrCreator], BookController.createBook);
 router.patch(
   "/:bid",

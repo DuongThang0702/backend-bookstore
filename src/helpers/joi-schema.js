@@ -1,11 +1,20 @@
 const joi = require("joi");
 
-//User
+//auth User
 const password = joi.string().min(6).required();
 const email = joi.string().pattern(new RegExp("gmail.com")).required();
 const refreshToken = joi.string().required();
 const mobile = joi.number().min(10).max(10).required();
 const token = joi.string().required();
+
+//address User
+const district = joi.string().required();
+const ward = joi.string().required();
+const city = joi.string().required();
+const homeNumber = joi.string().required();
+
+//cart User
+const quantity = joi.number().required();
 
 //Book
 const title = joi.string().required();
@@ -49,4 +58,9 @@ module.exports = {
   titleCoupon,
   discount,
   expiry,
+  district,
+  ward,
+  city,
+  homeNumber,
+  quantity,
 };

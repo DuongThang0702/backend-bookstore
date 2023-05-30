@@ -15,7 +15,8 @@ const OrderSchema = new Schema(
       default: "Processing",
       enum: ["Successed", "Cancelled", "Processing"],
     },
-    paymentIntent: {},
+    total: Number,
+    coupon: { type: Types.ObjectId, ref: "Coupon" },
     orderBy: { type: Types.ObjectId, ref: "User" },
   },
   { timestamps: true }

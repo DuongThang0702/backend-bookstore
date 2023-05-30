@@ -5,7 +5,17 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 
 const { User } = require("../models/");
-const { password, email, token } = require("../helpers/joi-schema");
+const {
+  password,
+  email,
+  token,
+  district,
+  ward,
+  city,
+  homeNumber,
+  bid,
+  quantity,
+} = require("../helpers/joi-schema");
 const handleErrors = require("../middleware/handle-errors");
 const sendMail = require("../helpers/send-email");
 
@@ -30,26 +40,23 @@ const UserController = {
     const { error } = joi.object({ email, password }).validate(req.body);
     if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
     try {
-      const response = await User.findOne({ email: req.body.email });
-      if (!response) return handleErrors.BadRequest("Email invalid", res);
+      const user = await User.findOne({ email: req.body.email });
+      if (!user) return handleErrors.BadRequest("Email invalid", res);
       const isChecked =
-        response &&
-        (await bcrypt.compare(req.body.password, response.password));
-      const accessToken =
-        isChecked && UserController.generateAccessToken(response);
+        user && (await bcrypt.compare(req.body.password, user.password));
+      const accessToken = isChecked && UserController.generateAccessToken(user);
       const refresh_token =
-        isChecked && UserController.generateRefreshToken(response);
-
-      await User.findByIdAndUpdate(response?._id, {
-        refreshToken: refresh_token,
-      });
-      const { password, ...userdata } = response?.toObject();
-
+        isChecked && UserController.generateRefreshToken(user);
+      const response = await User.findByIdAndUpdate(
+        user?._id,
+        { refresh_token },
+        { new: true }
+      );
+      const { password, ...userData } = response.toObject();
       res.cookie("refresh_token", refresh_token, {
         httpOnly: true,
         maxAge: 5 * 24 * 60 * 60 * 1000,
       });
-
       res.status(200).json({
         err: accessToken ? 0 : 1,
         mess: accessToken
@@ -57,7 +64,7 @@ const UserController = {
           : response
           ? "Wrong password"
           : "Something went wrong !",
-        user_data: accessToken ? userdata : null,
+        user_data: accessToken ? userData : null,
         access_token: accessToken ? `Bearer ${accessToken}` : null,
       });
     } catch (err) {
@@ -94,8 +101,7 @@ const UserController = {
         {
           refreshToken: cookie.refresh_token,
         },
-        { refreshToken: "" },
-        { new: true }
+        { refreshToken: "" }
       );
       response &&
         res.clearCookie("refresh_token", { httpOnly: true, secure: true });
@@ -112,7 +118,7 @@ const UserController = {
     return jwt.sign(
       { _id: response._id, email: response.email, role: response.role },
       process.env.ACCESS_TOKEN,
-      { expiresIn: "30s" }
+      { expiresIn: "1d" }
     );
   },
 
@@ -268,6 +274,80 @@ const UserController = {
         mess: response ? response : "No user update",
       });
     } catch (err) {
+      return handleErrors.InternalServerError(res);
+    }
+  },
+
+  updateAddress: async (req, res) => {
+    const { error } = joi
+      .object({ district, ward, city, homeNumber })
+      .validate(req.body);
+    if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
+    try {
+      const { _id } = req.user;
+      const response = await User.findByIdAndUpdate(
+        _id,
+        {
+          $push: { address: req.body },
+        },
+        { new: true }
+      ).select("-password -role -rerfeshToken");
+      res.status(200).json({
+        err: response ? 0 : 1,
+        mess: response ? "Updated" : "Something went worng !",
+        updateAddress: response ? response : null,
+      });
+    } catch (err) {
+      return handleErrors.InternalServerError(res);
+    }
+  },
+
+  updateCart: async (req, res) => {
+    const { error } = joi.object({ bid, quantity }).validate(req.body);
+    if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
+    try {
+      const { _id } = req.user;
+      const user = await User.findById(_id).select("cart");
+      const alreadyBook = user?.cart?.find(
+        (el) => el.bid.toString() === req.body.bid
+      );
+      if (alreadyBook) {
+        if (alreadyBook.quantity !== +req.body.quantity) {
+          const response = await User.updateOne(
+            {
+              cart: { $elemMatch: alreadyBook },
+            },
+            { $set: { "cart.$.quantity": req.body.quantity } },
+            { new: true }
+          );
+          res.status(200).json({
+            err: response ? 0 : 1,
+            Cart: response ? response : "Something went wrong !",
+          });
+        } else {
+          const response = await User.findByIdAndUpdate(
+            _id,
+            { $push: { cart: req.body } },
+            { new: true }
+          );
+          res.status(200).json({
+            err: response ? 0 : 1,
+            Cart: response ? response : "Something went wrong !",
+          });
+        }
+      } else {
+        const response = await User.findByIdAndUpdate(
+          _id,
+          { $push: { cart: req.body } },
+          { new: true }
+        );
+        res.status(200).json({
+          err: response ? 0 : 1,
+          Cart: response ? response : "Something went wrong !",
+        });
+      }
+    } catch (err) {
+      // throw new Error(err);
       return handleErrors.InternalServerError(res);
     }
   },
