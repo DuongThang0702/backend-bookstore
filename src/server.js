@@ -12,7 +12,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 app.use(
   cors({
-    // origin: process.env.REACT_URL,
+    origin: process.env.URL_CLIENT,
     methods: ["GET", "POST", "PATCH", "DELETE"],
   })
 );

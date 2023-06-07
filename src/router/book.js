@@ -5,7 +5,6 @@ const verifyToken = require("../middleware/verify-token");
 const { isAdminOrCreator } = require("../middleware/verify-role");
 const uploader = require("../config/cloudinary-config");
 const router = express.Router();
-
 router.get("/all-book", BookController.getBooks);
 router.get("/book-id/:bid", BookController.getBookById);
 
@@ -28,5 +27,7 @@ router.delete(
   [verifyToken, isAdminOrCreator],
   BookController.deleteBook
 );
+
+// router.get("/insert-data", BookController.insertData);
 
 module.exports = router;

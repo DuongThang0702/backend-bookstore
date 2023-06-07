@@ -2,7 +2,7 @@ const joi = require("joi");
 const slugify = require("slugify");
 const { Types } = require("mongoose");
 
-const { Book } = require("../models");
+const { Book, Category } = require("../models");
 const handleErrors = require("../middleware/handle-errors");
 const {
   title,
@@ -16,6 +16,7 @@ const {
   bookId,
 } = require("../helpers/joi-schema");
 const { multipleDelete } = require("../helpers/multiple-delete-image");
+// const data = require("../../data/data.json");
 
 const BookController = {
   getBooks: async (req, res) => {
@@ -34,6 +35,7 @@ const BookController = {
       //Filtering
       if (queries?.title)
         formatedQueries.title = { $regex: queries.title, $options: "i" };
+
       const queryCommand = Book.find(formatedQueries);
 
       //Sorting
@@ -98,6 +100,31 @@ const BookController = {
       return handleErrors.InternalServerError(res);
     }
   },
+
+  // insertData: async (req, res) => {
+  //   try {
+  //     const dataArr = Object.keys(data);
+  //     dataArr.forEach(async (item) => {
+  //       const newCate = new Category({ title: item });
+  //       await newCate.save();
+  //     });
+  //     // dataArr.forEach(async (item) => {
+  //     //   console.log("Successfully");
+  //     //   await Book.create({
+  //     //     title: item.bookTitle,
+  //     //     slug: slugify(item.bookTitle),
+  //     //     price: item.bookPrice,
+  //     //     category: "poetry",
+  //     //     images: item.imageUrl,
+  //     //     description: item.bookDescription,
+  //     //     available: item.available,
+  //     //   });
+  //     // });
+  //     res.json("ok");
+  //   } catch (err) {
+  //     throw new Error(err);
+  //   }
+  // },
 
   getBookById: async (req, res) => {
     const { bid } = req.params;
