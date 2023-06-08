@@ -4,6 +4,7 @@ const { Category } = require("../models");
 const handleErrors = require("../middleware/handle-errors");
 const { title } = require("../helpers/joi-schema");
 const { Types } = require("mongoose");
+const { default: slugify } = require("slugify");
 const CategoryController = {
   getCategories: async (req, res) => {
     try {
@@ -22,7 +23,7 @@ const CategoryController = {
     if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
     try {
       const { title } = req.body;
-      const isChecked = await Category.findOne({ title });
+      const isChecked = await Category.findOne({ title, slug: slugify(title) });
       if (isChecked) return handleErrors.BadRequest("title has existed", res);
       const newCategory = new Category({ title });
       const response = await newCategory.save();
@@ -55,9 +56,14 @@ const CategoryController = {
     if (!Types.ObjectId.isValid(cid))
       return handleErrors.BadRequest("invalid Category id", res);
     try {
-      const response = await Category.findByIdAndUpdate(cid, req.body, {
-        new: true,
-      });
+      const { title } = req.body;
+      const response = await Category.findByIdAndUpdate(
+        cid,
+        { title, slug: slugify(title) },
+        {
+          new: true,
+        }
+      );
       res.status(200).json({
         err: response ? 0 : 1,
         response: response ? response : "invalid Category id",

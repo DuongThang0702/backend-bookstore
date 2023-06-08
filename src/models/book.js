@@ -2,14 +2,19 @@ const { Schema, Types, model } = require("mongoose");
 
 const BookSchema = new Schema(
   {
-    //book title
     title: { type: String, require: true, unique: true },
     slug: { type: String, unique: true, lowercase: true, require: true },
-    //book Price
     price: { type: Number, require: true },
-    //book category
     category: { type: [String], require: true },
-    images: [{ type: String, require: true }],
+    images: [
+      {
+        filename: {
+          type: String,
+          default: "",
+        },
+        path: { type: String, unique: true },
+      },
+    ],
     description: { type: String, default: "" },
     available: { type: Number, default: 0 },
     ratings: [

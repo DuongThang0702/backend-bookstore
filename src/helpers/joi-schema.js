@@ -19,7 +19,7 @@ const quantity = joi.number().required();
 //Book
 const title = joi.string().required();
 const price = joi.number().required();
-const image = joi.string().required();
+const image = joi.string();
 const description = joi.string();
 const category = joi.array();
 const available = joi.number().required();

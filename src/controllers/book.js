@@ -103,23 +103,23 @@ const BookController = {
 
   // insertData: async (req, res) => {
   //   try {
-  //     const dataArr = Object.keys(data);
-  //     dataArr.forEach(async (item) => {
-  //       const newCate = new Category({ title: item });
-  //       await newCate.save();
-  //     });
+  //     const dataArr = Object(data.travel);
   //     // dataArr.forEach(async (item) => {
-  //     //   console.log("Successfully");
-  //     //   await Book.create({
-  //     //     title: item.bookTitle,
-  //     //     slug: slugify(item.bookTitle),
-  //     //     price: item.bookPrice,
-  //     //     category: "poetry",
-  //     //     images: item.imageUrl,
-  //     //     description: item.bookDescription,
-  //     //     available: item.available,
-  //     //   });
+  //     //   const newCate = new Category({ title: item, slug: slugify(item) });
+  //     //   await newCate.save();
   //     // });
+  //     dataArr.forEach(async (item) => {
+  //       console.log("Successfully");
+  //       await Book.create({
+  //         title: item.bookTitle,
+  //         slug: slugify(item.bookTitle),
+  //         price: item.bookPrice,
+  //         category: "travel",
+  //         images: { path: item.imageUrl },
+  //         description: item.bookDescription,
+  //         available: item.available,
+  //       });
+  //     });
   //     res.json("ok");
   //   } catch (err) {
   //     throw new Error(err);
@@ -159,12 +159,16 @@ const BookController = {
     }
   },
 
+  //bug
   deleteBook: async (req, res) => {
     const { bid } = req.params;
     if (!Types.ObjectId.isValid(bid))
       return handleErrors.BadRequest("Invalid bookId", res);
     try {
       const response = await Book.findByIdAndDelete(bid);
+      response.images.forEach((el) => {
+        multipleDelete(el.filename);
+      });
       res.status(200).json({
         err: response ? 0 : 1,
         mess: response ? "Delete successfully" : "BookId invalid",
@@ -235,11 +239,10 @@ const BookController = {
     }
   },
 
-  updateImageBook: async (req, res) => {
+  uploadImageBook: async (req, res) => {
     const fileData = req.files;
     if (!fileData) return handleErrors.BadRequest("Missing input", res);
     const listImageName = fileData.map((el) => el.filename);
-
     const { bid } = req.params;
     if (!Types.ObjectId.isValid(bid)) {
       for (const imageName of listImageName) {
@@ -251,7 +254,16 @@ const BookController = {
       const response = await Book.findByIdAndUpdate(
         bid,
         {
-          $push: { images: { $each: fileData.map((el) => el.path) } },
+          $push: {
+            images: {
+              $each: fileData.map((el) => {
+                return {
+                  filename: el.filename,
+                  path: el.path,
+                };
+              }),
+            },
+          },
         },
         { new: true }
       );
