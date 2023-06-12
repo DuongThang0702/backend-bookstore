@@ -1,6 +1,7 @@
 const joi = require("joi");
 const slugify = require("slugify");
 const { Types } = require("mongoose");
+const { v2: cloudinary } = require("cloudinary");
 
 const { Book, Category } = require("../models");
 const handleErrors = require("../middleware/handle-errors");
@@ -15,7 +16,6 @@ const {
   comment,
   bookId,
 } = require("../helpers/joi-schema");
-const { multipleDelete } = require("../helpers/multiple-delete-image");
 // const data = require("../../data/data.json");
 
 const BookController = {
@@ -115,7 +115,8 @@ const BookController = {
   //         slug: slugify(item.bookTitle),
   //         price: item.bookPrice,
   //         category: "travel",
-  //         images: { path: item.imageUrl },
+  //         sold: Math.round(Math.random() * 8000),
+  //         image: { path: item.imageUrl },
   //         description: item.bookDescription,
   //         available: item.available,
   //       });
@@ -166,9 +167,7 @@ const BookController = {
       return handleErrors.BadRequest("Invalid bookId", res);
     try {
       const response = await Book.findByIdAndDelete(bid);
-      response.images.forEach((el) => {
-        multipleDelete(el.filename);
-      });
+      await cloudinary.uploader.destroy(response.filename);
       res.status(200).json({
         err: response ? 0 : 1,
         mess: response ? "Delete successfully" : "BookId invalid",
@@ -240,38 +239,27 @@ const BookController = {
   },
 
   uploadImageBook: async (req, res) => {
-    const fileData = req.files;
+    const fileData = req.file;
     if (!fileData) return handleErrors.BadRequest("Missing input", res);
-    const listImageName = fileData.map((el) => el.filename);
     const { bid } = req.params;
     if (!Types.ObjectId.isValid(bid)) {
-      for (const imageName of listImageName) {
-        multipleDelete(imageName);
-      }
+      await cloudinary.uploader.destroy(fileData.filename);
       return handleErrors.BadRequest("Invalid Id", res);
     }
     try {
       const response = await Book.findByIdAndUpdate(
         bid,
         {
-          $push: {
-            images: {
-              $each: fileData.map((el) => {
-                return {
-                  filename: el.filename,
-                  path: el.path,
-                };
-              }),
-            },
+          image: {
+            filename: fileData.filename,
+            path: fileData.path,
           },
         },
         { new: true }
       );
 
       if (fileData && !response) {
-        for (const imageName of listImageName) {
-          multipleDelete(imageName);
-        }
+        await cloudinary.uploader.destroy(fileData.filename);
       }
       res.status(200).json({
         err: response ? 0 : 1,

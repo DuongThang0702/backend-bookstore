@@ -6,15 +6,15 @@ const BookSchema = new Schema(
     slug: { type: String, unique: true, lowercase: true, require: true },
     price: { type: Number, require: true },
     category: { type: [String], require: true },
-    images: [
-      {
-        filename: {
-          type: String,
-          default: "",
-        },
-        path: { type: String, unique: true },
+    sold: { type: Number, default: 0 },
+    image: {
+      filename: {
+        type: String,
+        default: "",
       },
-    ],
+      path: { type: String, unique: true },
+    },
+
     description: { type: String, default: "" },
     available: { type: Number, default: 0 },
     ratings: [
