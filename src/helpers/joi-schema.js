@@ -6,6 +6,8 @@ const email = joi.string().pattern(new RegExp("gmail.com")).required();
 const refreshToken = joi.string().required();
 const mobile = joi.number().min(10).max(10).required();
 const token = joi.string().required();
+const firstName = joi.string().required();
+const lastName = joi.string().required();
 
 //address User
 const district = joi.string().required();
@@ -63,4 +65,6 @@ module.exports = {
   city,
   homeNumber,
   quantity,
+  firstName,
+  lastName,
 };

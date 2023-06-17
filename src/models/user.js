@@ -22,7 +22,7 @@ const UserSchema = new Schema(
       },
     ],
     lastName: { type: String, default: "" },
-    firstname: { type: String, default: "" },
+    firstName: { type: String, default: "" },
     cart: [
       {
         bid: { type: Types.ObjectId, ref: "Book" },
@@ -33,6 +33,7 @@ const UserSchema = new Schema(
     avatar: { type: String, default: null },
     mobile: { type: Number, default: null },
     refreshToken: { type: String, default: "" },
+    registerToken: { type: String, default: "" },
     passwordChangedAt: String,
     passwordResetToken: String,
     passwordResetExpired: String,

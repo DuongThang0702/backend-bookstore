@@ -1,6 +1,6 @@
 const nodemailer = require("nodemailer");
 
-const sendMail = async ({ email, html }) => {
+const sendMail = async ({ email, html, subject }) => {
   let transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 587,
@@ -15,8 +15,8 @@ const sendMail = async ({ email, html }) => {
   let info = await transporter.sendMail({
     from: '"BookStore" <no-reply@bookstore.com>', // sender address
     to: email, // list of receivers
-    subject: "Forgot password", // Subject line
-    html: html, // html body
+    subject, // Subject line
+    html, // html body
   });
 
   return info;

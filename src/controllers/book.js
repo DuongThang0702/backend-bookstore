@@ -61,9 +61,9 @@ const BookController = {
         .then(async (rs) => {
           const counts = await Book.find(formatedQueries).countDocuments();
           return res.status(200).json({
-            err: rs ? 0 : 1,
+            error: rs ? 0 : 1,
             count: counts,
-            book: rs,
+            books: rs,
           });
         })
         .catch((err) => {
@@ -93,8 +93,8 @@ const BookController = {
       const newBook = new Book(req.body);
       const response = await newBook.save();
       res.status(200).json({
-        err: response ? 0 : 1,
-        mess: response ? response : "cann't create books",
+        error: response ? 0 : 1,
+        mes: response ? response : "cann't create books",
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);
@@ -134,7 +134,7 @@ const BookController = {
     try {
       const response = await Book.findById(bid);
       res.status(200).json({
-        err: response ? 0 : 1,
+        error: response ? 0 : 1,
         bookData: response ? response : "Something went worng !",
       });
     } catch (err) {
@@ -152,8 +152,8 @@ const BookController = {
         new: true,
       });
       res.status(200).json({
-        err: response ? 0 : 1,
-        updatedBook: response ? response : "Cannot update book",
+        error: response ? 0 : 1,
+        book: response ? response : "Cannot update book",
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);
@@ -169,8 +169,8 @@ const BookController = {
       const response = await Book.findByIdAndDelete(bid);
       await cloudinary.uploader.destroy(response.filename);
       res.status(200).json({
-        err: response ? 0 : 1,
-        mess: response ? "Delete successfully" : "BookId invalid",
+        error: response ? 0 : 1,
+        mes: response ? "Delete successfully" : "BookId invalid",
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);
@@ -229,8 +229,8 @@ const BookController = {
 
         await response.save();
         res.status(200).json({
-          err: 0,
-          response,
+          error: 0,
+          mes: response,
         });
       }
     } catch (err) {
@@ -262,9 +262,9 @@ const BookController = {
         await cloudinary.uploader.destroy(fileData.filename);
       }
       res.status(200).json({
-        err: response ? 0 : 1,
-        mess: response ? "Updated" : "Something went worng !",
-        data: response ? response : null,
+        error: response ? 0 : 1,
+        mes: response ? "Updated" : "Something went worng !",
+        book: response ? response : null,
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);

@@ -3,6 +3,7 @@ const joi = require("joi");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const makeToken = require("uniqid");
 
 const { User } = require("../models/");
 const {
@@ -15,6 +16,8 @@ const {
   homeNumber,
   bid,
   quantity,
+  firstName,
+  lastName,
 } = require("../helpers/joi-schema");
 const handleErrors = require("../middleware/handle-errors");
 const sendMail = require("../helpers/send-email");
@@ -28,8 +31,8 @@ const UserController = {
       );
       if (!response) return handleErrors.BadRequest("not found", res);
       res.status(200).json({
-        err: 0,
-        mess: "Got",
+        error: 0,
+        mes: "Got",
         userData: response,
       });
     } catch (err) {
@@ -58,8 +61,8 @@ const UserController = {
         maxAge: 5 * 24 * 60 * 60 * 1000,
       });
       res.status(200).json({
-        err: accessToken ? 0 : 1,
-        mess: accessToken
+        error: accessToken ? 0 : 1,
+        mes: accessToken
           ? "login successfully"
           : response
           ? "Wrong password"
@@ -72,21 +75,90 @@ const UserController = {
     }
   },
 
+  // register: async (req, res) => {
+  //   const { error } = joi
+  //     .object({ password, email, firstName, lastName })
+  //     .validate(req.body);
+  //   if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
+  //   try {
+  //     const salt = await bcrypt.genSalt(10);
+  //     const hash = await bcrypt.hash(req.body.password, salt);
+  //     const isCheckedUser = await User.findOne({ email: req.body.email });
+  //     if (isCheckedUser)
+  //       return handleErrors.BadRequest("Email has existed", res);
+  //     const newUser = new User({
+  //       firstName: req.body.firstname,
+  //       lastName: req.body.lastname,
+  //       email: req.body.email,
+  //       password: hash,
+  //     });
+  //     const response = await newUser.save();
+  //     res.status(200).json({
+  //       error: response ? 0 : 1,
+  //       mes: response
+  //         ? "Register is successfully. Please go to login"
+  //         : "failed",
+  //     });
+  //   } catch (err) {
+  //     return handleErrors.InternalServerError(res);
+  //   }
+  // },
+
   register: async (req, res) => {
-    const { error } = joi.object({ password, email }).validate(req.body);
+    const { error } = joi
+      .object({ email, password, lastName, firstName })
+      .validate(req.body);
     if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
+    const isCheckUser = await User.findOne({ email: req.body.email });
+    if (isCheckUser) return handleErrors.BadRequest("Email has existed", res);
+    try {
+      const token = makeToken();
+      res.cookie(
+        "dataRegister",
+        { ...req.body, token },
+        {
+          httpOnly: true,
+          maxAge: 15 * 60 * 1000,
+        }
+      );
+      const html = `<p>
+      Please click the button below to complete the registration process</p> </br>
+      <a href=${`${process.env.URL_SERVER}/api/v1/user/final-register/${token}`}>Click me</a>`;
+
+      await sendMail({
+        email: req.body.email,
+        html,
+        subject: "complete registration",
+      });
+      res
+        .status(200)
+        .json({ error: 0, mes: "Please check your email to active account" });
+    } catch (err) {
+      return handleErrors.InternalServerError(res);
+    }
+  },
+
+  finalRegister: async (req, res) => {
+    const cookie = req.cookies;
+    const { token } = req.params;
+    if (!cookie || cookie?.dataRegister?.token !== token) {
+      res.clearCookie("dataRegister");
+      return res.redirect(`${process.env.URL_CLIENT}/final-register/failed`);
+    }
     try {
       const salt = await bcrypt.genSalt(10);
-      const hash = await bcrypt.hash(req.body.password, salt);
-      const isCheckedUser = await User.findOne({ email: req.body.email });
-      if (isCheckedUser)
-        return handleErrors.BadRequest("Email has existed", res);
-      const newUser = new User({
-        email: req.body.email,
+      const hash = await bcrypt.hash(cookie?.dataRegister?.password, salt);
+      const newUser = await User.create({
+        email: cookie?.dataRegister?.email,
         password: hash,
+        lastName: cookie?.dataRegister?.lastName,
+        firstName: cookie?.dataRegister?.firstName,
       });
-      const response = await newUser.save();
-      res.status(200).json(response);
+      res.clearCookie("dataRegister");
+      if (newUser)
+        return res.redirect(`${process.env.URL_CLIENT}/final-register/success`);
+      else
+        return res.redirect(`${process.env.URL_CLIENT}/final-register/failed`);
     } catch (err) {
       return handleErrors.InternalServerError(res);
     }
@@ -106,8 +178,8 @@ const UserController = {
       response &&
         res.clearCookie("refresh_token", { httpOnly: true, secure: true });
       res.status(200).json({
-        err: response ? 0 : 1,
-        mess: response ? "logout successfully" : "Refresh token not matched",
+        error: response ? 0 : 1,
+        mes: response ? "logout successfully" : "Refresh token not matched",
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);
@@ -149,7 +221,7 @@ const UserController = {
             refreshToken: cookie.refresh_token,
           });
           res.status(200).json({
-            err: response ? 0 : 1,
+            error: response ? 0 : 1,
             newAccessToken: response
               ? UserController.generateAccessToken(response)
               : null,
@@ -172,13 +244,14 @@ const UserController = {
       const html = `<p>We heard that you lost your BookStore password. Sorry about that!</p> </br> 
         <p>But don’t worry! You can use the following button to reset your password:</p> </br> 
         <a href=${`${process.env.URL_SERVER}/api/v1/user/reset-password/${resetToken}`}>Reset your password </a>`;
-      const data = {
+
+      const response = await sendMail({
         email,
         html,
-      };
-      const response = await sendMail(data);
+        subject: "Forgot password",
+      });
       res.status(200).json({
-        err: response ? 0 : 1,
+        error: response ? 0 : 1,
         response,
       });
     } catch (err) {
@@ -208,8 +281,8 @@ const UserController = {
       user.passwordResetExpired = "";
       await user.save();
       res.status(200).json({
-        err: user ? 0 : 1,
-        mess: user ? "Updated password" : "Something went wrong",
+        error: user ? 0 : 1,
+        mes: user ? "Updated password" : "Something went wrong",
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);
@@ -220,7 +293,7 @@ const UserController = {
     try {
       const response = await User.find();
       res.status(200).json({
-        err: response ? 0 : 1,
+        error: response ? 0 : 1,
         Users: response ? response : null,
       });
     } catch (err) {
@@ -233,8 +306,8 @@ const UserController = {
       const { uid } = req.params;
       const response = await User.findByIdAndDelete(uid);
       res.status(200).json({
-        err: response ? 0 : 1,
-        mess: response
+        error: response ? 0 : 1,
+        mes: response
           ? `User with email ${response.email} deleted`
           : "No user delete",
       });
@@ -252,8 +325,8 @@ const UserController = {
         new: true,
       }).select("-password -role");
       res.status(200).json({
-        err: response ? 0 : 1,
-        mess: response ? response : "No user update",
+        error: response ? 0 : 1,
+        mes: response ? response : "No user update",
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);
@@ -270,8 +343,8 @@ const UserController = {
       }).select("-password -role");
 
       res.status(200).json({
-        err: response ? 0 : 1,
-        mess: response ? response : "No user update",
+        error: response ? 0 : 1,
+        mes: response ? response : "No user update",
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);
@@ -293,8 +366,8 @@ const UserController = {
         { new: true }
       ).select("-password -role -rerfeshToken");
       res.status(200).json({
-        err: response ? 0 : 1,
-        mess: response ? "Updated" : "Something went worng !",
+        error: response ? 0 : 1,
+        mes: response ? "Updated" : "Something went worng !",
         updateAddress: response ? response : null,
       });
     } catch (err) {
@@ -342,7 +415,7 @@ const UserController = {
           { new: true }
         );
         res.status(200).json({
-          err: response ? 0 : 1,
+          error: response ? 0 : 1,
           Cart: response ? response : "Something went wrong !",
         });
       }
