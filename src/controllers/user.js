@@ -234,26 +234,25 @@ const UserController = {
   },
 
   forgotPassword: async (req, res) => {
+    const { error } = joi.object({ email }).validate(req.body);
+    if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
     try {
-      const email = req.query?.email;
-      if (!email) return handleErrors.BadRequest("Missing Email", res);
-      const user = await User.findOne({ email: email });
+      const { email } = req.body;
+      const user = await User.findOne({ email });
       if (!user) return handleErrors.BadRequest("User not found", res);
       const resetToken = user.createPasswordChangedToken();
       await user?.save();
       const html = `<p>We heard that you lost your BookStore password. Sorry about that!</p> </br> 
         <p>But don’t worry! You can use the following button to reset your password:</p> </br> 
-        <a href=${`${process.env.URL_SERVER}/api/v1/user/reset-password/${resetToken}`}>Reset your password </a>`;
-
-      const response = await sendMail({
+        <a href=${`${process.env.URL_CLIENT}/reset-password/${resetToken}`}>Reset your password </a>`;
+      await sendMail({
         email,
         html,
         subject: "Forgot password",
       });
-      res.status(200).json({
-        error: response ? 0 : 1,
-        response,
-      });
+      res
+        .status(200)
+        .json({ error: 0, mes: "Please check your email to active account" });
     } catch (err) {
       return handleErrors.InternalServerError(res);
     }

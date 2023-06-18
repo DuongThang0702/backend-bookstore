@@ -4,10 +4,10 @@ const verifyToken = require("../middleware/verify-token");
 const { isAdmin } = require("../middleware/verify-role");
 
 const router = Router();
-router.get("/forgot-password", UserController.forgotPassword);
-router.get("/refresh-token", UserController.refreshTokenController);
-router.post("/register", UserController.register);
+router.get("/refresh-token/:token", UserController.refreshTokenController);
+router.post("/forgot-password", UserController.forgotPassword);
 router.get("/final-register/:token", UserController.finalRegister);
+router.post("/register", UserController.register);
 router.post("/login", UserController.login);
 router.patch("/reset-password", UserController.resetPassword);
 router.delete("/logout", UserController.logout);
