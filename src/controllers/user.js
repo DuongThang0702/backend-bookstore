@@ -31,9 +31,9 @@ const UserController = {
       );
       if (!response) return handleErrors.BadRequest("not found", res);
       res.status(200).json({
-        error: 0,
-        mes: "Got",
-        userData: response,
+        error: response ? 0 : 1,
+        mes: response ? "Got" : "Something went wrong",
+        userData: response ? response : null,
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);
@@ -75,35 +75,6 @@ const UserController = {
     }
   },
 
-  // register: async (req, res) => {
-  //   const { error } = joi
-  //     .object({ password, email, firstName, lastName })
-  //     .validate(req.body);
-  //   if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
-  //   try {
-  //     const salt = await bcrypt.genSalt(10);
-  //     const hash = await bcrypt.hash(req.body.password, salt);
-  //     const isCheckedUser = await User.findOne({ email: req.body.email });
-  //     if (isCheckedUser)
-  //       return handleErrors.BadRequest("Email has existed", res);
-  //     const newUser = new User({
-  //       firstName: req.body.firstname,
-  //       lastName: req.body.lastname,
-  //       email: req.body.email,
-  //       password: hash,
-  //     });
-  //     const response = await newUser.save();
-  //     res.status(200).json({
-  //       error: response ? 0 : 1,
-  //       mes: response
-  //         ? "Register is successfully. Please go to login"
-  //         : "failed",
-  //     });
-  //   } catch (err) {
-  //     return handleErrors.InternalServerError(res);
-  //   }
-  // },
-
   register: async (req, res) => {
     const { error } = joi
       .object({ email, password, lastName, firstName })
@@ -113,6 +84,9 @@ const UserController = {
     if (isCheckUser) return handleErrors.BadRequest("Email has existed", res);
     try {
       const token = makeToken();
+      const registerToken = jwt.sign({ token }, process.env.REGISTER_TOKEN, {
+        expiresIn: 15 * 60 * 1000,
+      });
       res.cookie(
         "dataRegister",
         { ...req.body, token },
@@ -123,7 +97,7 @@ const UserController = {
       );
       const html = `<p>
       Please click the button below to complete the registration process</p> </br>
-      <a href=${`${process.env.URL_SERVER}/api/v1/user/final-register/${token}`}>Click me</a>`;
+      <a href=${`${process.env.URL_SERVER}/api/v1/user/final-register/${registerToken}`}>Click me</a>`;
 
       await sendMail({
         email: req.body.email,
@@ -141,7 +115,21 @@ const UserController = {
   finalRegister: async (req, res) => {
     const cookie = req.cookies;
     const { token } = req.params;
-    if (!cookie || cookie?.dataRegister?.token !== token) {
+    let finalRegisterToken;
+    jwt.verify(token, process.env.REGISTER_TOKEN, (error, decode) => {
+      if (error) {
+        const isChecked = error instanceof jwt.TokenExpiredError;
+        if (isChecked) {
+          res.clearCookie("dataRegister");
+          return handleErrors.UnAuth("Token expired !", res, isChecked);
+        } else {
+          res.clearCookie("dataRegister");
+          return handleErrors.UnAuth("Invalid token", res, isChecked);
+        }
+      }
+      finalRegisterToken = decode.token;
+    });
+    if (!cookie || finalRegisterToken !== cookie?.dataRegister?.token) {
       res.clearCookie("dataRegister");
       return res.redirect(`${process.env.URL_CLIENT}/final-register/failed`);
     }
@@ -165,18 +153,17 @@ const UserController = {
   },
 
   logout: async (req, res) => {
+    const cookie = req.cookies;
+    if (!cookie && !cookie.refresh_token)
+      return handleErrors.BadRequest("No refresh token in cookies", res);
     try {
-      const cookie = req.cookies;
-      if (!cookie && !cookie.refresh_token)
-        return handleErrors.BadRequest("No refresh token in cookies", res);
       const response = await User.findOneAndUpdate(
         {
-          refreshToken: cookie.refresh_token,
+          refresh_token: cookie.refresh_token,
         },
-        { refreshToken: "" }
+        { refresh_token: "" }
       );
-      response &&
-        res.clearCookie("refresh_token", { httpOnly: true, secure: true });
+      res.clearCookie("refresh_token", { httpOnly: true, secure: true });
       res.status(200).json({
         error: response ? 0 : 1,
         mes: response ? "logout successfully" : "Refresh token not matched",

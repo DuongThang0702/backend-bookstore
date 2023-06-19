@@ -32,7 +32,7 @@ const UserSchema = new Schema(
     role: { type: String, default: "user" },
     avatar: { type: String, default: null },
     mobile: { type: Number, default: null },
-    refreshToken: { type: String, default: "" },
+    refresh_token: { type: String, default: "" },
     registerToken: { type: String, default: "" },
     passwordChangedAt: String,
     passwordResetToken: String,
