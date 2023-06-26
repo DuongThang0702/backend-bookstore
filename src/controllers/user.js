@@ -177,7 +177,7 @@ const UserController = {
     return jwt.sign(
       { _id: response._id, email: response.email, role: response.role },
       process.env.ACCESS_TOKEN,
-      { expiresIn: "1d" }
+      { expiresIn: "15s" }
     );
   },
 
