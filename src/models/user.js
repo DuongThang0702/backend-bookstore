@@ -29,7 +29,7 @@ const UserSchema = new Schema(
         quantity: { type: Number },
       },
     ],
-    role: { type: String, default: "user" },
+    role: { type: String, enum: ["user", "admin", "creator"], default: "user" },
     avatar: { type: String, default: null },
     mobile: { type: Number, default: null },
     refresh_token: { type: String, default: "" },
