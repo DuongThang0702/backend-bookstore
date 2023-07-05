@@ -27,7 +27,7 @@ const UserController = {
     try {
       const userId = req.user?._id;
       const response = await User.findById(userId).select(
-        "-refreshToken -password -role"
+        "-refreshToken -password"
       );
       if (!response) return handleErrors.BadRequest("not found", res);
       res.status(200).json({
@@ -87,34 +87,40 @@ const UserController = {
       const registerToken = jwt.sign({ token }, process.env.REGISTER_TOKEN, {
         expiresIn: 15 * 60 * 1000,
       });
-      res.cookie(
-        "dataRegister",
-        { ...req.body, token },
-        {
-          httpOnly: true,
-          maxAge: 15 * 60 * 1000,
-        }
-      );
-      const html = `<p>
-      Please click the button below to complete the registration process</p> </br>
-      <a href=${`${process.env.URL_SERVER}/api/v1/user/final-register/${registerToken}`}>Click me</a>`;
-
-      await sendMail({
-        email: req.body.email,
-        html,
-        subject: "complete registration",
+      const { email, password, lastName, firstName } = req.body;
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(password, salt);
+      const newUser = await User.create({
+        email: btoa(email) + "@" + token,
+        password: hash,
+        firstName,
+        lastName,
       });
-      res
-        .status(200)
-        .json({ error: 0, mes: "Please check your email to active account" });
+      if (newUser) {
+        const html = `<p>
+        Please click the button below to complete the registration process</p> </br>
+        <p>${registerToken}</p>`;
+
+        await sendMail({
+          email: req.body.email,
+          html,
+          subject: "complete registration",
+        });
+      }
+      res.status(200).json({
+        error: newUser ? 0 : 1,
+        mes: newUser
+          ? "Please check your email to active account"
+          : "Something went wrong, please try later",
+      });
     } catch (err) {
       return handleErrors.InternalServerError(res);
     }
   },
 
   finalRegister: async (req, res) => {
-    const cookie = req.cookies;
-    const { token } = req.params;
+    // const cookie = req.cookies;
+    const { token } = req.body;
     let finalRegisterToken;
     jwt.verify(token, process.env.REGISTER_TOKEN, (error, decode) => {
       if (error) {
@@ -129,20 +135,20 @@ const UserController = {
       }
       finalRegisterToken = decode.token;
     });
-    if (!cookie || finalRegisterToken !== cookie?.dataRegister?.token) {
-      res.clearCookie("dataRegister");
-      return res.redirect(`${process.env.URL_CLIENT}/final-register/failed`);
-    }
+    // if (!cookie || finalRegisterToken !== cookie?.dataRegister?.token) {
+    //   res.clearCookie("dataRegister");
+    //   return res.redirect(`${process.env.URL_CLIENT}/final-register/failed`);
+    // }
     try {
-      const salt = await bcrypt.genSalt(10);
-      const hash = await bcrypt.hash(cookie?.dataRegister?.password, salt);
-      const newUser = await User.create({
-        email: cookie?.dataRegister?.email,
-        password: hash,
-        lastName: cookie?.dataRegister?.lastName,
-        firstName: cookie?.dataRegister?.firstName,
-      });
-      res.clearCookie("dataRegister");
+      // const salt = await bcrypt.genSalt(10);
+      // const hash = await bcrypt.hash(cookie?.dataRegister?.password, salt);
+      // const newUser = await User.create({
+      //   email: cookie?.dataRegister?.email,
+      //   password: hash,
+      //   lastName: cookie?.dataRegister?.lastName,
+      //   firstName: cookie?.dataRegister?.firstName,
+      // });
+      // res.clearCookie("dataRegister");
       if (newUser)
         return res.redirect(`${process.env.URL_CLIENT}/final-register/success`);
       else
@@ -177,7 +183,7 @@ const UserController = {
     return jwt.sign(
       { _id: response._id, email: response.email, role: response.role },
       process.env.ACCESS_TOKEN,
-      { expiresIn: "15s" }
+      { expiresIn: "1d" }
     );
   },
 
