@@ -84,28 +84,29 @@ const UserController = {
     if (isCheckUser) return handleErrors.BadRequest("Email has existed", res);
     try {
       const token = makeToken();
-      const registerToken = jwt.sign({ token }, process.env.REGISTER_TOKEN, {
-        expiresIn: 15 * 60 * 1000,
-      });
       const { email, password, lastName, firstName } = req.body;
       const salt = await bcrypt.genSalt(10);
       const hash = await bcrypt.hash(password, salt);
+      const emailEdited = btoa(email) + "@" + token;
       const newUser = await User.create({
-        email: btoa(email) + "@" + token,
+        email: emailEdited,
         password: hash,
         firstName,
         lastName,
       });
       if (newUser) {
         const html = `<p>
-        Please click the button below to complete the registration process</p> </br>
-        <p>${registerToken}</p>`;
+        Please click the button below to complete the registration process</p></br>
+        <p>${token}</p>`;
 
         await sendMail({
           email: req.body.email,
           html,
           subject: "complete registration",
         });
+        setTimeout(async () => {
+          await User.deleteOne({ email: emailEdited });
+        }, [15 * 60 * 1000]);
       }
       res.status(200).json({
         error: newUser ? 0 : 1,
@@ -119,40 +120,23 @@ const UserController = {
   },
 
   finalRegister: async (req, res) => {
-    // const cookie = req.cookies;
-    const { token } = req.body;
-    let finalRegisterToken;
-    jwt.verify(token, process.env.REGISTER_TOKEN, (error, decode) => {
-      if (error) {
-        const isChecked = error instanceof jwt.TokenExpiredError;
-        if (isChecked) {
-          res.clearCookie("dataRegister");
-          return handleErrors.UnAuth("Token expired !", res, isChecked);
-        } else {
-          res.clearCookie("dataRegister");
-          return handleErrors.UnAuth("Invalid token", res, isChecked);
-        }
-      }
-      finalRegisterToken = decode.token;
-    });
-    // if (!cookie || finalRegisterToken !== cookie?.dataRegister?.token) {
-    //   res.clearCookie("dataRegister");
-    //   return res.redirect(`${process.env.URL_CLIENT}/final-register/failed`);
-    // }
+    const { token } = req.params;
+    if (!token) {
+      return res.redirect(`${process.env.URL_CLIENT}/final-register/failed`);
+    }
     try {
-      // const salt = await bcrypt.genSalt(10);
-      // const hash = await bcrypt.hash(cookie?.dataRegister?.password, salt);
-      // const newUser = await User.create({
-      //   email: cookie?.dataRegister?.email,
-      //   password: hash,
-      //   lastName: cookie?.dataRegister?.lastName,
-      //   firstName: cookie?.dataRegister?.firstName,
-      // });
-      // res.clearCookie("dataRegister");
-      if (newUser)
-        return res.redirect(`${process.env.URL_CLIENT}/final-register/success`);
-      else
-        return res.redirect(`${process.env.URL_CLIENT}/final-register/failed`);
+      const notActiveEmail = await User.findOne({
+        email: new RegExp(`${token}$`),
+      });
+      if (notActiveEmail) {
+        notActiveEmail.email = atob(notActiveEmail?.email?.split("@")[0]);
+        await notActiveEmail.save();
+      }
+
+      res.status(200).json({
+        error: notActiveEmail ? 0 : 1,
+        mes: notActiveEmail ? "success" : "failed",
+      });
     } catch (err) {
       return handleErrors.InternalServerError(res);
     }
@@ -283,11 +267,53 @@ const UserController = {
 
   getUsers: async (req, res) => {
     try {
-      const response = await User.find();
-      res.status(200).json({
-        error: response ? 0 : 1,
-        Users: response ? response : null,
-      });
+      const queries = { ...req.body };
+      const excludedFields = ["page", "limit", "sort", "fields"];
+      excludedFields.forEach((el) => delete queries[el]);
+
+      let queryString = JSON.stringify(queries);
+      queryString = queryString.replace(
+        /\b(gte|gt|lte|lt)\b/g,
+        (match) => `$${match}`
+      );
+
+      const formatedQueries = JSON.parse(queryString);
+
+      if (queries?.name)
+        formatedQueries.name = { $regex: queries.name, $options: "i" };
+
+      const queryCommand = User.find(formatedQueries);
+
+      //Sorting
+      if (req.query?.sort) {
+        const sortBy = req.query.sort.split(",").join(" ");
+        queryCommand.sort(sortBy);
+      }
+
+      //fields
+      if (req.query?.fields) {
+        const fields = req.query.fields.split(",").join(" ");
+        queryCommand.select(fields);
+      }
+
+      const page = +req.query.page || 1;
+      const limit = +req.query.limit || +process.env.BOOKS_LIMIT;
+      const skip = (page - 1) * limit;
+      queryCommand.limit(limit).skip(skip);
+
+      queryCommand
+        .exec()
+        .then(async (rs) => {
+          const counts = await User.find(formatedQueries).countDocuments();
+          return res.status(200).json({
+            error: rs ? 0 : 1,
+            count: counts,
+            Users: rs,
+          });
+        })
+        .catch((err) => {
+          throw new Error(err);
+        });
     } catch (err) {
       return handleErrors.InternalServerError(res);
     }
@@ -414,6 +440,30 @@ const UserController = {
     } catch (err) {
       // throw new Error(err);
       return handleErrors.InternalServerError(res);
+    }
+  },
+
+  createUserByAdmin: async (req, res) => {
+    const { error } = joi
+      .object({ email, password, lastName, firstName })
+      .validate(req.body);
+    if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
+    try {
+      const { password, email, lastName, firstName } = req.body;
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(password, salt);
+      const newUser = new User({ password: hash, email, lastName, firstName });
+      const response = await newUser.save();
+      res
+        .status(200)
+        .json({
+          error: response ? 0 : 1,
+          userData: response
+            ? response
+            : "Something went wrong, please try again !",
+        });
+    } catch (err) {
+      throw new Error(err);
     }
   },
 };

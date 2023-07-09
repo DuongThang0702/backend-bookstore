@@ -23,6 +23,7 @@ const UserSchema = new Schema(
     ],
     lastName: { type: String, default: "" },
     firstName: { type: String, default: "" },
+    isBlocked: { type: Boolean, default: false },
     cart: [
       {
         bid: { type: Types.ObjectId, ref: "Book" },
