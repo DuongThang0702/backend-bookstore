@@ -279,9 +279,13 @@ const UserController = {
 
       const formatedQueries = JSON.parse(queryString);
 
-      if (queries?.name)
-        formatedQueries.name = { $regex: queries.name, $options: "i" };
-
+      if (req.query.q) {
+        formatedQueries["$or"] = [
+          { lastName: { $regex: req.query.q, $options: "i" } },
+          { email: { $regex: req.query.q, $options: "i" } },
+          { firstName: { $regex: req.query.q, $options: "i" } },
+        ];
+      }
       const queryCommand = User.find(formatedQueries);
 
       //Sorting
@@ -454,14 +458,12 @@ const UserController = {
       const hash = await bcrypt.hash(password, salt);
       const newUser = new User({ password: hash, email, lastName, firstName });
       const response = await newUser.save();
-      res
-        .status(200)
-        .json({
-          error: response ? 0 : 1,
-          userData: response
-            ? response
-            : "Something went wrong, please try again !",
-        });
+      res.status(200).json({
+        error: response ? 0 : 1,
+        userData: response
+          ? response
+          : "Something went wrong, please try again !",
+      });
     } catch (err) {
       throw new Error(err);
     }
