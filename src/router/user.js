@@ -21,7 +21,7 @@ router.patch("/:uid", [verifyToken, isAdmin], UserController.updateUserByAdmin);
 router.get("/all-user", [verifyToken, isAdmin], UserController.getUsers);
 router.post(
   "/create-user-by-admin",
-  //   [verifyToken, isAdmin],
+  [verifyToken, isAdmin],
   UserController.createUserByAdmin
 );
 router.delete("/:uid", [verifyToken, isAdmin], UserController.deleteUser);

@@ -362,11 +362,11 @@ const UserController = {
         return handleErrors.BadRequest("Missing input", res);
       const response = await User.findByIdAndUpdate(uid, req.body, {
         new: true,
-      }).select("-password -role");
+      }).select("-password");
 
       res.status(200).json({
         error: response ? 0 : 1,
-        mes: response ? response : "No user update",
+        mes: response ? "Updated" : "No user update",
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);
