@@ -280,6 +280,7 @@ const UserController = {
       const formatedQueries = JSON.parse(queryString);
 
       if (req.query.q) {
+        delete formatedQueries.q;
         formatedQueries["$or"] = [
           { lastName: { $regex: req.query.q, $options: "i" } },
           { email: { $regex: req.query.q, $options: "i" } },

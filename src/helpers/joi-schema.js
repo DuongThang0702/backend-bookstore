@@ -21,9 +21,9 @@ const quantity = joi.number().required();
 //Book
 const title = joi.string().required();
 const price = joi.number().required();
-const image = joi.string();
+const image = joi.required();
 const description = joi.string();
-const category = joi.array();
+const category = joi.any();
 const available = joi.number().required();
 const sold = joi.number();
 const totalRatings = joi.number();

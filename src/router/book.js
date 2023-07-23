@@ -17,7 +17,12 @@ router.post(
   uploader.single("image-book"),
   BookController.uploadImageBook
 );
-router.post("/", [verifyToken, isAdminOrCreator], BookController.createBook);
+router.post(
+  "/",
+  [verifyToken, isAdminOrCreator],
+  uploader.single("image"),
+  BookController.createBook
+);
 router.patch(
   "/:bid",
   [verifyToken, isAdminOrCreator],

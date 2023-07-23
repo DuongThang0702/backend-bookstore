@@ -10,7 +10,7 @@ const CategoryController = {
     try {
       const response = await Category.find();
       res.status(200).json({
-        err: response ? 0 : 1,
+        error: response ? 0 : 1,
         data: response ? response : "Something went wrong",
       });
     } catch (err) {
@@ -28,7 +28,7 @@ const CategoryController = {
       const newCategory = new Category({ title });
       const response = await newCategory.save();
       res.status(200).json({
-        err: response ? 0 : 1,
+        error: response ? 0 : 1,
         response: response ? response : "Something went wrong",
       });
     } catch (err) {
@@ -43,8 +43,8 @@ const CategoryController = {
     try {
       const response = await Category.findByIdAndDelete(cid);
       res.status(200).json({
-        err: response ? 0 : 1,
-        mess: response ? "Category deleted" : "invalid Category id",
+        error: response ? 0 : 1,
+        mes: response ? "Category deleted" : "invalid Category id",
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);
@@ -65,7 +65,7 @@ const CategoryController = {
         }
       );
       res.status(200).json({
-        err: response ? 0 : 1,
+        error: response ? 0 : 1,
         response: response ? response : "invalid Category id",
       });
     } catch (err) {

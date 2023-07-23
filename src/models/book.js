@@ -5,7 +5,7 @@ const BookSchema = new Schema(
     title: { type: String, require: true, unique: true },
     slug: { type: String, unique: true, lowercase: true, require: true },
     price: { type: Number, require: true },
-    category: { type: [String], require: true },
+    category: { type: Array, require: true },
     sold: { type: Number, default: 0 },
     image: {
       filename: {

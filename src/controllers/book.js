@@ -31,13 +31,22 @@ const BookController = {
         (match) => `$${match}`
       );
       const formatedQueries = JSON.parse(queryString);
-
+      let queryObject = {};
       //Filtering
       if (queries?.title)
         formatedQueries.title = { $regex: queries.title, $options: "i" };
 
-      const queryCommand = Book.find(formatedQueries);
-
+      //search page admin
+      if (queries.q) {
+        delete formatedQueries.q;
+        queryObject = {
+          $or: [
+            { title: { $regex: queries.q, $options: "i" } },
+            { category: { $regex: queries.q, $options: "i" } },
+          ],
+        };
+      }
+      const queryCommand = Book.find({ ...formatedQueries, ...queryObject });
       //Sorting
       if (req.query?.sort) {
         const sortBy = req.query.sort.split(",").join(" ");
@@ -59,42 +68,61 @@ const BookController = {
       queryCommand
         .exec()
         .then(async (rs) => {
-          const counts = await Book.find(formatedQueries).countDocuments();
+          const counts = await Book.find({
+            ...formatedQueries,
+            ...queryObject,
+          }).countDocuments();
           return res.status(200).json({
             error: rs ? 0 : 1,
             count: counts,
-            books: rs,
+            books: rs ? rs : "not found",
           });
         })
         .catch((err) => {
           throw new Error(err);
         });
     } catch (err) {
+      throw new Error(err);
       return handleErrors.InternalServerError(res);
     }
   },
 
   createBook: async (req, res) => {
+    const fileData = req.file;
     const { error } = joi
       .object({
+        image,
         title,
         price,
-        image,
-        description,
-        category,
         available,
+        category,
+        description,
       })
       .validate(req.body);
-    if (error) return handleErrors.BadRequest(error?.details[0]?.message, res);
+    if (error) {
+      await cloudinary.uploader.destroy(fileData.filename);
+      return handleErrors.BadRequest(error?.details[0]?.message, res);
+    }
+    if (!fileData) return handleErrors.BadRequest("Missing Image", res);
     try {
+      const category = req.body.category.split(",");
       const isChecked = await Book.findOne({ title: req.body.title });
-      if (isChecked) return handleErrors.BadRequest("Title has exist", res);
+      if (isChecked) {
+        await cloudinary.uploader.destroy(fileData.filename);
+        return handleErrors.BadRequest("Title has exist", res);
+      }
       req.body.slug = slugify(req.body.title);
-      const newBook = new Book(req.body);
-      const response = await newBook.save();
+      const response = await Book.create({
+        ...req.body,
+        category,
+        image: { filename: fileData.filename, path: fileData.path },
+      });
+      if (fileData && !response)
+        await cloudinary.uploader.destroy(fileData.filename);
+
       res.status(200).json({
         error: response ? 0 : 1,
-        mes: response ? response : "cann't create books",
+        mes: response ? "Create successful books" : "cann't create books",
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);
