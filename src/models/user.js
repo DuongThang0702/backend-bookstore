@@ -38,6 +38,7 @@ const UserSchema = new Schema(
     passwordChangedAt: String,
     passwordResetToken: String,
     passwordResetExpired: String,
+    avatar: { type: String, default: null },
   },
   { timestamps: true }
 );

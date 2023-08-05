@@ -340,16 +340,18 @@ const UserController = {
   },
 
   updateUser: async (req, res) => {
+    const fileData = req.file;
     const { _id } = req.user;
     if (!_id || Object.keys(req.body).length === 0)
       return handleErrors.BadRequest("Missing input", res);
     try {
+      if (fileData) req.body.avatar = fileData.path;
       const response = await User.findByIdAndUpdate(_id, req.body, {
         new: true,
       }).select("-password -role");
       res.status(200).json({
         error: response ? 0 : 1,
-        mes: response ? response : "No user update",
+        mes: response ? "Updated" : "Something went wrong",
       });
     } catch (err) {
       return handleErrors.InternalServerError(res);

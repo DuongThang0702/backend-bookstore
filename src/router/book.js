@@ -11,12 +11,12 @@ router.get("/book-id/:bid", BookController.getBookById);
 
 //private
 router.post("/ratings", verifyToken, BookController.ratings);
-router.post(
-  "/upload-image/:bid",
-  [verifyToken, isAdminOrCreator],
-  uploader.single("image-book"),
-  BookController.uploadImageBook
-);
+// router.post(
+//   "/upload-image/:bid",
+//   [verifyToken, isAdminOrCreator],
+//   uploader.single("image-book"),
+//   BookController.uploadImageBook
+// );
 router.post(
   "/",
   [verifyToken, isAdminOrCreator],
@@ -26,6 +26,7 @@ router.post(
 router.patch(
   "/:bid",
   [verifyToken, isAdminOrCreator],
+  uploader.single("image"),
   BookController.updateBook
 );
 router.delete(

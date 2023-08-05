@@ -2,6 +2,7 @@ const { Router } = require("express");
 const { UserController } = require("../controllers");
 const verifyToken = require("../middleware/verify-token");
 const { isAdmin } = require("../middleware/verify-role");
+const uploader = require("../config/cloudinary-config");
 
 const router = Router();
 router.get("/refresh-token/:token", UserController.refreshTokenController);
@@ -16,7 +17,12 @@ router.delete("/logout", UserController.logout);
 router.get("/current", verifyToken, UserController.getUserCurrent);
 router.patch("/update-cart", verifyToken, UserController.updateCart);
 router.patch("/update-address", verifyToken, UserController.updateAddress);
-router.patch("/current", verifyToken, UserController.updateUser);
+router.patch(
+  "/current",
+  verifyToken,
+  uploader.single("avatar"),
+  UserController.updateUser
+);
 router.patch("/:uid", [verifyToken, isAdmin], UserController.updateUserByAdmin);
 router.get("/all-user", [verifyToken, isAdmin], UserController.getUsers);
 router.post(

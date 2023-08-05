@@ -82,7 +82,6 @@ const BookController = {
           throw new Error(err);
         });
     } catch (err) {
-      throw new Error(err);
       return handleErrors.InternalServerError(res);
     }
   },
@@ -171,14 +170,25 @@ const BookController = {
   },
 
   updateBook: async (req, res) => {
+    const fileData = req.file;
     const { bid } = req.params;
     if (!Types.ObjectId.isValid(bid))
       return handleErrors.BadRequest("Invalid bookId", res);
     try {
+      const category = req.body.category.split(",");
+      if (fileData)
+        req.body.image = { filename: fileData.filename, path: fileData.path };
       if (req.body && req.body.title) req.body.slug = slugify(req.body.title);
-      const response = await Book.findByIdAndUpdate(bid, req.body, {
-        new: true,
-      });
+      const response = await Book.findByIdAndUpdate(
+        bid,
+        { ...req.body, category },
+        {
+          new: true,
+        }
+      );
+      if (fileData && !response)
+        await cloudinary.uploader.destroy(fileData.filename);
+
       res.status(200).json({
         error: response ? 0 : 1,
         book: response ? response : "Cannot update book",
@@ -195,7 +205,7 @@ const BookController = {
       return handleErrors.BadRequest("Invalid bookId", res);
     try {
       const response = await Book.findByIdAndDelete(bid);
-      await cloudinary.uploader.destroy(response.filename);
+      await cloudinary.uploader.destroy(response.image.filename);
       res.status(200).json({
         error: response ? 0 : 1,
         mes: response ? "Delete successfully" : "BookId invalid",
